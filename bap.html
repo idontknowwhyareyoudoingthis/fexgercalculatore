@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#101820">
+<title>Fixed Gear Calculator</title>
+<style>
+:root{color-scheme:dark;--bg:#101820;--panel:#151f29;--panel2:#1d2935;--line:#2d3b49;--text:#edf3f7;--muted:#9eacb9;--mint:#83dfc3}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(145deg,#101a26,#111820 60%,#14251f);color:var(--text);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:900px;margin:auto;padding:28px 18px 55px}
+h1{font-size:clamp(30px,6vw,44px);line-height:1.1;margin:0 0 8px}
+.intro{color:var(--muted);margin:0 0 26px}
+.card{background:linear-gradient(145deg,#17222d,#141e28);border:1px solid var(--line);border-radius:22px;padding:22px;margin:16px 0}
+h2{font-size:19px;margin:0 0 18px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+label{display:block;color:var(--muted);font-size:14px;margin-bottom:8px}
+input,select{width:100%;padding:14px;border:1px solid var(--line);border-radius:14px;background:#0e1720;color:var(--text);font:inherit}
+input:focus,select:focus{outline:2px solid var(--mint);border-color:var(--mint)}
+.wheels,.toggle{display:flex;gap:9px;flex-wrap:wrap}
+button{border:1px solid var(--line);border-radius:13px;background:#0e1720;color:var(--muted);padding:12px 15px;font:inherit;cursor:pointer}
+button.active{border-color:var(--mint);background:#18342f;color:var(--mint);font-weight:700}
+.help{font-size:13px;color:var(--muted);margin:12px 0 0}
+.metrics{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.metric{padding:16px;border-radius:15px;background:var(--panel2);border:1px solid var(--line)}
+.metric span{display:block;color:var(--muted);font-size:13px}
+.metric strong{display:block;font-size:clamp(22px,4vw,30px);margin-top:4px}
+.metric.primary{border-color:#4e9d87;background:#17332f}
+.metric.primary strong{color:var(--mint)}
+.result-note{color:var(--muted);margin:16px 0 0}
+.visual{display:grid;grid-template-columns:190px 1fr;gap:24px;align-items:center}
+.wheel{width:180px;height:180px;border:10px solid #526273;border-radius:50%;position:relative;margin:auto;background:radial-gradient(circle,#1e2d3b 0 28%,#0e1720 29% 100%)}
+.wheel:before{content:"";position:absolute;inset:13px;border:1px dashed #65798a;border-radius:50%}
+.dot{position:absolute;width:9px;height:9px;border-radius:50%;background:var(--mint);transform:translate(-50%,-50%);box-shadow:0 0 7px #83dfc377}
+.center{position:absolute;inset:0;display:grid;place-items:center;text-align:center;font-size:11px;letter-spacing:.08em;font-weight:700;color:#dbe6ed}
+.visual strong{font-size:30px;color:var(--mint)}
+footer{font-size:12px;color:#82919f;margin:18px 4px}
+@media(max-width:620px){.grid{gap:12px}.card{padding:18px}.visual{grid-template-columns:1fr;text-align:center}.wheel{margin:6px auto}.metrics{gap:9px}}
+</style>
+</head>
+<body>
+<main>
+<h1>Fixed Gear Calculator</h1>
+<p class="intro">Skid patches, gear ratio, gear inches, rollout and estimated crank cadence from your entered speed.</p>
+
+<section class="card">
+<h2>Drivetrain</h2>
+<div class="grid">
+<div><label for="wheel">Wheel size</label><select id="wheel"><option value="559">26er</option><option value="584">27.5</option><option value="622" selected>29 / 700c</option></select></div>
+<div><label for="tire">Tire width (mm)</label><select id="tire"></select></div>
+<div><label for="chainring">Chainring (teeth)</label><input id="chainring" type="number" min="1" max="200" value="49"></div>
+<div><label for="cog">Rear cog (teeth)</label><input id="cog" type="number" min="1" max="100" value="17"></div>
+</div>
+<p class="help">Choose your wheel size and tire width. Wheel measurements are handled in the background.</p>
+</section>
+
+<section class="card">
+<h2>Speed input</h2>
+<div style="max-width:360px"><label for="speed">Your speed (KPH)</label><input id="speed" type="number" min="0" max="200" step="0.1" value="50"></div>
+<p class="help">Crank RPM is estimated automatically from your entered speed, gearing and tire size.</p>
+</section>
+
+<section class="card">
+<h2>Gear &amp; skid patch results</h2>
+<div class="metrics">
+<div class="metric primary"><span>Gear ratio</span><strong id="ratio">2.88 : 1</strong></div>
+<div class="metric"><span>Gear inches</span><strong id="gearIn">—</strong></div>
+<div class="metric"><span>Rollout / crank revolution</span><strong id="rollout">—</strong></div>
+<div class="metric"><span>Wheel RPM</span><strong id="wheelRpm">—</strong></div>
+<div class="metric primary"><span>Estimated crank RPM</span><strong id="crankRpm">—</strong></div>
+<div class="metric"><span>GCD</span><strong id="gcd">1</strong></div>
+<div class="metric"><span>Reduced gear ratio</span><strong id="reduced">49 / 17</strong></div>
+<div class="metric primary"><span>One-foot skid patches</span><strong id="oneCount">17</strong></div>
+<div class="metric primary"><span>Alternating-foot skid patches</span><strong id="altCount">34</strong></div>
+</div>
+<p class="result-note" id="explanation">49T × 17T reduces to 49/17. One-foot patches: 17. Alternating-foot patches: 34.</p>
+</section>
+
+<section class="card">
+<h2>Skid patch visualizer</h2>
+<div class="toggle"><button id="oneBtn" class="active" type="button">One-foot skids</button><button id="altBtn" type="button">Alternating feet</button></div>
+<div class="visual" style="margin-top:20px">
+<div class="wheel" id="wheelViz"><div class="center">REAR<br>TYRE</div></div>
+<div><strong id="visualCount">17 positions</strong><p class="result-note" id="visualText">One-foot skid positions before the pattern repeats.</p><p class="help">Each dot marks a distinct tire contact position in the selected pattern.</p></div>
+</div>
+</section>
+<footer>Skid patch counts depend only on chainring and rear cog tooth counts. Wheel size and tire width affect gear inches, rollout and RPM estimates, not skid patch count. Tire circumference is estimated from nominal rim diameter and tire width; actual measurements vary.</footer>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const tireWidths = {
+  "559":[38,40,42,44,47,50,53,56,58,60,61,63],
+  "584":[38,40,42,44,47,50,53,56,58,60,61,63],
+  "622":[23,25,28,30,32,35,38,40,42,45,47,50,53,56,58,60,61,63]
+};
+let selectedPattern = "one";
+
+function gcd(a,b){
+  a=Math.abs(Math.trunc(a)); b=Math.abs(Math.trunc(b));
+  while(b!==0){const remainder=a%b;a=b;b=remainder;}
+  return a;
+}
+function format(value, decimals=1){
+  return Number.isFinite(value) ? value.toFixed(decimals) : "—";
+}
+function populateTires(){
+  const wheel=$("wheel").value;
+  const previous=Number($("tire").value);
+  const choices=tireWidths[wheel];
+  $("tire").innerHTML=choices.map(width=>`<option value="${width}">${width}c</option>`).join("");
+  $("tire").value=choices.includes(previous)?String(previous):(wheel==="622"?"25": "47");
+}
+function calculate(){
+  const chainring=Number($("chainring").value);
+  const cog=Number($("cog").value);
+  const rim=Number($("wheel").value);
+  const tire=Number($("tire").value);
+  const speed=Number($("speed").value);
+
+  if(!Number.isInteger(chainring)||!Number.isInteger(cog)||chainring<1||cog<1||!tire){
+    return;
+  }
+
+  // Reduce chainring/cog. The denominator is the one-foot patch count.
+  const divisor=gcd(chainring,cog);
+  const reducedRing=chainring/divisor;
+  const reducedCog=cog/divisor;
+  const oneFoot=cog/divisor;
+
+  // Alternating-foot skids add a second set only when the reduced
+  // chainring numerator is odd. If it is even, the sets overlap.
+  const alternating=reducedRing%2===1 ? oneFoot*2 : oneFoot;
+
+  const ratio=chainring/cog;
+  const wheelDiameterMm=rim+2*tire;
+  const wheelDiameterIn=wheelDiameterMm/25.4;
+  const circumferenceM=Math.PI*wheelDiameterMm/1000;
+  const rolloutM=circumferenceM*ratio;
+  const wheelRPM=speed>=0 ? (speed/3.6)/circumferenceM*60 : NaN;
+  const crankRPM=wheelRPM/ratio;
+
+  $("ratio").textContent=format(ratio,2)+" : 1";
+  $("gearIn").textContent=format(wheelDiameterIn*ratio,1)+'"';
+  $("rollout").textContent=format(rolloutM,2)+" m";
+  $("wheelRpm").textContent=format(wheelRPM,1)+" RPM";
+  $("crankRpm").textContent=format(crankRPM,1)+" RPM";
+  $("gcd").textContent=divisor;
+  $("reduced").textContent=reducedRing+" / "+reducedCog;
+  $("oneCount").textContent=oneFoot;
+  $("altCount").textContent=alternating;
+  $("explanation").textContent=
+    `${chainring}T × ${cog}T reduces to ${reducedRing}/${reducedCog}. `+
+    `One-foot patches: ${oneFoot}. `+
+    `The reduced chainring number is ${reducedRing} (${reducedRing%2?"odd":"even"}), `+
+    `so alternating-foot patches: ${alternating}.`;
+
+  const count=selectedPattern==="one"?oneFoot:alternating;
+  $("visualCount").textContent=count+" positions";
+  $("visualText").textContent=(selectedPattern==="one"?"One-foot":"Alternating-foot")+
+    " skid positions before the pattern repeats.";
+
+  const wheel=$("wheelViz");
+  wheel.querySelectorAll(".dot").forEach(dot=>dot.remove());
+  const shown=Math.min(count,100);
+  for(let i=0;i<shown;i++){
+    const angle=(i/shown)*Math.PI*2-Math.PI/2;
+    const radius=78;
+    const dot=document.createElement("span");
+    dot.className="dot";
+    dot.style.left=(90+Math.cos(angle)*radius)+"px";
+    dot.style.top=(90+Math.sin(angle)*radius)+"px";
+    wheel.appendChild(dot);
+  }
+}
+$("oneBtn").addEventListener("click",()=>{
+  selectedPattern="one";
+  $("oneBtn").classList.add("active");$("altBtn").classList.remove("active");
+  calculate();
+});
+$("altBtn").addEventListener("click",()=>{
+  selectedPattern="alt";
+  $("altBtn").classList.add("active");$("oneBtn").classList.remove("active");
+  calculate();
+});
+["chainring","cog","speed","tire"].forEach(id=>$(id).addEventListener("input",calculate));
+$("wheel").addEventListener("change",()=>{populateTires();calculate();});
+populateTires();
+calculate();
+</script>
+</body>
+</html>
